@@ -77,13 +77,9 @@ fun takeWhile _ [] = []
   | takeWhile p (x::xs) = if p x then x :: takeWhile p xs 
                           else [x]
                         
-fun getPairs [] = []
-  | getPairs [x] = []
-  | getPairs (x::y::ys) = (x,y) :: getPairs (y::ys)
-
 exception EmptyProduction
 
-fun first [] = S []
+fun first [] = S [T Eps]
   | first str =
       let
     fun getFirst _ (T t) = S [T t]
@@ -108,4 +104,28 @@ fun first [] = S []
         val withEps = takeWhile (fn s => inSet(s, T Eps)) firstPerGS
     in
         foldl (fn (x,acc) => union(x,acc)) (S []) withEps
+    end
+
+exception TerminalFollow
+fun follow (T _) = raise TerminalFollow
+  | follow (NT B) =
+    let
+      val prodRulesWithB = filter (fn (PR(_,symbols)) => inList(symbols, NT B)) prodrules
+
+      fun getTailsAfterBs [] = []
+        | getTailsAfterBs (x::xs) =
+          if x = (NT B) then xs :: getTailsAfterBs xs
+          else getTailsAfterBs xs
+
+      fun processOneProdRule (PR(head,symbols)) =
+        let
+          val setlist = map first (getTailsAfterBs symbols)
+          val bigunion = foldl (fn (x,acc) => union(x,acc)) (S []) setlist
+        in
+          bigunion
+        end
+
+      val sets = map processOneProdRule prodRulesWithB
+    in
+      foldl (fn (x,acc) => union(x,acc)) (S []) sets
     end
