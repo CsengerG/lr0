@@ -1,16 +1,16 @@
 exception InvalidInputException;
 
 datatype Terminal = Number |
-                 Plus |
-                 Minus |
-                 Star |
-                 ExclMark |
-                 Cos |
-                 Exponent |
-                 Point |
-                 OpPar |
-                 ClPar |
-                 Eps
+                    Plus |
+                    Minus |
+                    Star |
+                    ExclMark |
+                    Cos |
+                    Exponent |
+                    Point |
+                    OpPar |
+                    ClPar |
+                    Eps
 
 datatype NonTerminal = Start | expr | E | E1 | E2 | E3 | E4 | E5
 datatype GrammarSymbol = T  of Terminal
@@ -19,13 +19,21 @@ datatype GrammarSymbol = T  of Terminal
 
 datatype ProductionRule = PR of NonTerminal * GrammarSymbol list
 
+(*
 val prodrules = [
-    PR(Start, [NT expr]),
+    PR(E, [T Plus, NT E]),
+    PR(E, [T Minus, NT E]),
+    PR(E, [NT E, T Plus, NT E]),
+    PR(E, [NT E, T Minus, NT E]),
+    PR(E, [NT E, T Star, NT E]),
+    PR(E, [T Number])]
+*)
 
-    PR(expr, [T Plus, NT expr]),
-    PR(expr, [T Minus, NT expr]),
-    PR(expr, [NT E]),
+val prodrules = [
+    PR(Start, [NT E]),
 
+    PR(E, [T Plus, NT E]),
+    PR(E, [T Minus, NT E]),
     PR(E, [NT E1, T Plus, NT E]),
     PR(E, [NT E1]),
 
@@ -77,12 +85,13 @@ fun takeWhile _ [] = []
   | takeWhile p (x::xs) = if p x then x :: takeWhile p xs 
                           else [x]
                         
-exception EmptyProduction
+exception NoFirst
 
-fun first [] = S [T Eps]
+fun first [] = S []
   | first str =
       let
-    fun getFirst _ (T t) = S [T t]
+    fun getFirst _ EndMarker = raise NoFirst
+      | getFirst _ (T t) = S [T t]
       | getFirst visited (NT nt) =
         let
           val prodrulesWithNt = filter (fn (PR(left, _)) => left = nt) prodrules
@@ -106,8 +115,9 @@ fun first [] = S [T Eps]
         foldl (fn (x,acc) => union(x,acc)) (S []) withEps
     end
 
-exception TerminalFollow
-fun follow (T _) = raise TerminalFollow
+exception NoFollow
+fun follow EndMarker = raise NoFollow
+  | follow (T _) = S [T Eps]
   | follow (NT B) =
     let
       val prodRulesWithB = filter (fn (PR(_,symbols)) => inList(symbols, NT B)) prodrules
