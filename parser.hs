@@ -66,10 +66,10 @@ prodRules = [
   PR(Term, [NT Term, T Star, NT CosTerm]),
   PR(Term, [NT CosTerm]),
 
-  PR(CosTerm, [T Cos, NT FactorialTerm]),
+  PR(CosTerm, [T Cos, NT CosTerm]),
   PR(CosTerm, [NT FactorialTerm]),
 
-  PR(FactorialTerm, [NT Factor, T ExclMark]),
+  PR(FactorialTerm, [NT FactorialTerm, T ExclMark]),
   PR(FactorialTerm, [NT Factor]),
 
   PR(Factor, [T Number]),
@@ -313,16 +313,16 @@ eval strExpr = fst $ evalUtil parsedTree values
       evalUtil cosTermTree vs
 
     -- costerm --
-    evalUtil (Br (NT CosTerm, [_, factorialTermTree])) vs =
+    evalUtil (Br (NT CosTerm, [_, cosTermTree])) vs =
       (cos ret, vState) where
-        (ret, vState) = evalUtil factorialTermTree vs
+        (ret, vState) = evalUtil cosTermTree vs
     evalUtil (Br (NT CosTerm, [factorialTermTree])) vs =
       evalUtil factorialTermTree vs
 
     -- factorialterm --
-    evalUtil (Br (NT FactorialTerm, [factorTree, _])) vs =
+    evalUtil (Br (NT FactorialTerm, [factorialTermTree, _])) vs =
       (fromInteger $ fact (floor ret), vState) where
-        (ret, vState) = evalUtil factorTree vs
+        (ret, vState) = evalUtil factorialTermTree vs
     evalUtil (Br (NT FactorialTerm, [factorTree])) vs =
       evalUtil factorTree vs
 
@@ -332,3 +332,18 @@ eval strExpr = fst $ evalUtil parsedTree values
     evalUtil (Br (NT Factor, [_ , exprTree, _])) vs =
       evalUtil exprTree vs
  
+
+tests = [
+  (eval "1", 1.0),
+  (eval ".1", 0.1),
+  (eval "1+1", 2.0),
+  (eval ".2e+2+-1.0e2*100.02", -9982.0),
+  (eval "cos 12!", -0.76619765),
+  (eval "(123)", 123.0),
+  (eval "1000e-3", 1.0),
+  (eval "-1000e-3", -1.0),
+  (eval "1*2+3*4+5*6*7", 224.0),
+  (eval "cos cos cos 3!!", 0.784951602),
+  (eval "1+1-1+1-1+1-1", 1.0),
+  (eval "1+++        ++++  +++1", 2.0),
+  (eval "- - - -1 +-+-+ 1", 2.0)]
