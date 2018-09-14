@@ -38,6 +38,7 @@ data NonTerminal = AugStart | Start
                  | CosTerm 
                  | FactorialTerm
                  | Factor
+                 | SignedNumber
                    deriving (Show, Eq, Ord)
 
 -- GrammarSymbol is used in production rules --
@@ -72,8 +73,13 @@ prodRules = [
   PR(FactorialTerm, [NT FactorialTerm, T ExclMark]),
   PR(FactorialTerm, [NT Factor]),
 
-  PR(Factor, [T Number]),
-  PR(Factor, [T OpPar, NT E, T ClPar])]
+  PR(Factor, [NT SignedNumber]),
+  PR(Factor, [T OpPar, NT E, T ClPar]),
+
+  PR(SignedNumber, [T Number]),
+  PR(SignedNumber, [T Plus, T Number]),
+  PR(SignedNumber, [T Minus, T Number])]
+
 
 ---------------------------------------------------------------------------------------------------
 --------------------------------- UTILITY ---------------------------------------------------------
@@ -327,10 +333,19 @@ eval strExpr = fst $ evalUtil parsedTree values
       evalUtil factorTree vs
 
     -- factor --
-    evalUtil (Br (NT Factor, [number])) vs =
-      evalUtil number vs
+    evalUtil (Br (NT Factor, [signedNumberTree])) vs =
+      evalUtil signedNumberTree vs
     evalUtil (Br (NT Factor, [_ , exprTree, _])) vs =
       evalUtil exprTree vs
+
+    -- signednumber --
+    evalUtil (Br (NT SignedNumber, [numberTree])) vs =
+      evalUtil numberTree vs
+    evalUtil (Br (NT SignedNumber, [Lf (T Plus), numberTree])) vs =
+      evalUtil numberTree vs
+    evalUtil (Br (NT SignedNumber, [Lf (T Minus), numberTree])) vs =
+      (-ret, v1) where
+        (ret, v1) = evalUtil numberTree vs
  
 
 tests = [
@@ -346,4 +361,5 @@ tests = [
   (eval "cos cos cos 3!!", 0.784951602),
   (eval "1+1-1+1-1+1-1", 1.0),
   (eval "1+++        ++++  +++1", 2.0),
-  (eval "- - - -1 +-+-+ 1", 2.0)]
+  (eval "- - - -1 +-+-+ 1", 2.0),
+  (eval "cos -2", -0.41614684)]
